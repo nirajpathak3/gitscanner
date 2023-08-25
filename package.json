@@ -1,0 +1,21 @@
+{
+  "name": "githubscanner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --experimental-modules index.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "apollo-server": "^3.12.0",
+    "axios": "^1.4.0",
+    "esm": "^3.2.25",
+    "graphql": "^16.8.0",
+    "p-limit": "^4.0.0"
+  }
+}
