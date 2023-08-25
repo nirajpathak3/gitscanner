@@ -3,7 +3,7 @@ import axios from 'axios';
 import pLimit from 'p-limit';
 
 // Replace with your GitHub personal access token
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 
 const typeDefs = gql`
   type Repository {
@@ -45,8 +45,6 @@ const resolvers = {
                         },
                     })),
                 ]);
-
-                console.log(responses);
 
                 const repositories = responses.map(repo => ({
                     name: repo.data.name,
