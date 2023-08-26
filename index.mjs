@@ -2,9 +2,6 @@ import { ApolloServer, gql } from 'apollo-server';
 import axios from 'axios';
 import pLimit from 'p-limit';
 
-// Replace with your GitHub personal access token
-const GITHUB_TOKEN = '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';
-
 const typeDefs = gql`
   type Repository {
     name: String
@@ -17,8 +14,8 @@ const typeDefs = gql`
   }
 
   type Query {
-    repositories: [Repository]
-    repositoryDetails(owner: String!, name: String!): Repository
+    repositories(developerToken: String!): [Repository]
+    repositoryDetails(owner: String!, name: String!, developerToken:String!): Repository
   }
 `;
 
@@ -26,68 +23,88 @@ const limit = pLimit(2);
 
 const resolvers = {
     Query: {
-        repositories: async () => {
-            try {               
-                const responses = await Promise.all([
-                    limit(() => axios.get('https://api.github.com/repos/nirajpathak3/repoA', {
-                        headers: {
-                            Authorization: `Bearer ${GITHUB_TOKEN}`,
-                        },
-                    })),
-                    limit(() => axios.get('https://api.github.com/repos/nirajpathak3/repoB', {
-                        headers: {
-                            Authorization: `Bearer ${GITHUB_TOKEN}`,
-                        },
-                    })),
-                    limit(() => axios.get('https://api.github.com/repos/nirajpathak3/repoC', {
-                        headers: {
-                            Authorization: `Bearer ${GITHUB_TOKEN}`,
-                        },
-                    })),
-                ]);
+        repositories: async (_, { developerToken }) => {
+            try {
+                const response = await axios.get('https://api.github.com/user/repos', {
+                    headers: {
+                        Authorization: `Bearer ${developerToken}`,
+                    },
+                });
 
-                const repositories = responses.map(repo => ({
-                    name: repo.data.name,
-                    size: repo.data.size,
-                    owner: repo.data.owner.login,
-                    isPrivate: repo.data.private,
-                }));
+                const repositories = await Promise.all(
+                    response.data.map(repo => {
+                        return limit(() => ({
+                            name: repo.name,
+                            size: repo.size,
+                            owner: repo.owner.login,
+                            isPrivate: repo.private,
+                        }));
+                    })
+                );
 
                 return repositories;
             } catch (error) {
                 throw new Error('Failed to fetch repositories from GitHub API');
             }
         },
-        repositoryDetails: async (_, { owner, name }) => {
+        repositoryDetails: async (_, { owner, name, developerToken }) => {
             try {
                 const response = await axios.get(`https://api.github.com/repos/${owner}/${name}`, {
                     headers: {
-                        Authorization: `Bearer ${GITHUB_TOKEN}`,
+                        Authorization: `Bearer ${developerToken}`,
                     },
                 });
 
                 const repo = response.data;
 
+                // Function to recursively scan for YAML files
+                const scanForYamlFiles = async (path) => {
+                    const filesResponse = await axios.get(`https://api.github.com/repos/${owner}/${name}/contents/${path}`, {
+                        headers: {
+                            Authorization: `Bearer ${developerToken}`,
+                        },
+                    });
+
+                    const numFiles = filesResponse.data.length;
+                    let ymlContent = '';
+
+                    for (const file of filesResponse.data) {
+                        if (file.type === 'file' && file.name.endsWith('.yml')) {
+                            // Fetch content of the YAML file
+                            const contentResponse = await axios.get(file.download_url);
+                            ymlContent = contentResponse.data;
+                            break;
+                        } else if (file.type === 'dir') {
+                            // Recursively scan subdirectory
+                            const subdirectoryPath = `${path}/${file.name}`;
+                            const subdirectoryYamlContent = await scanForYamlFiles(subdirectoryPath);
+                            if (subdirectoryYamlContent) {
+                                ymlContent = subdirectoryYamlContent;
+                                break;
+                            }
+                        }
+                    }
+
+                    return ymlContent;
+                };
+
+                // Start scanning from the root directory
+                const ymlContent = await scanForYamlFiles('');
+                
+
+                // Fetch number of files
                 const filesResponse = await axios.get(`https://api.github.com/repos/${owner}/${name}/contents`, {
                     headers: {
-                        Authorization: `Bearer ${GITHUB_TOKEN}`,
+                        Authorization: `Bearer ${developerToken}`,
                     },
                 });
 
                 const numFiles = filesResponse.data.length;
 
-                let ymlContent = '';
-                for (const file of filesResponse.data) {
-                    if (file.name.endsWith('.yml')) {
-                        const contentResponse = await axios.get(file.download_url);
-                        ymlContent = contentResponse.data;
-                        break;
-                    }
-                }
-
+                // Fetch active webhooks
                 const webhooksResponse = await axios.get(`https://api.github.com/repos/${owner}/${name}/hooks`, {
                     headers: {
-                        Authorization: `Bearer ${GITHUB_TOKEN}`,
+                        Authorization: `Bearer ${developerToken}`,
                     },
                 });
 
