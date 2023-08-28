@@ -1,6 +1,8 @@
 import { ApolloServer, gql } from 'apollo-server';
 import axios from 'axios';
 import pLimit from 'p-limit';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const typeDefs = gql`
   type Repository {
@@ -14,8 +16,8 @@ const typeDefs = gql`
   }
 
   type Query {
-    repositories(developerToken: String!): [Repository]
-    repositoryDetails(owner: String!, name: String!, developerToken:String!): Repository
+    repositories: [Repository]
+    repositoryDetails(owner: String!, name: String!): Repository
   }
 `;
 
@@ -23,11 +25,11 @@ const limit = pLimit(2);
 
 const resolvers = {
     Query: {
-        repositories: async (_, { developerToken }) => {
+        repositories: async () => {
             try {
                 const response = await axios.get('https://api.github.com/user/repos', {
                     headers: {
-                        Authorization: `Bearer ${developerToken}`,
+                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
                     },
                 });
 
@@ -47,11 +49,11 @@ const resolvers = {
                 throw new Error('Failed to fetch repositories from GitHub API');
             }
         },
-        repositoryDetails: async (_, { owner, name, developerToken }) => {
+        repositoryDetails: async (_, { owner, name }) => {
             try {
                 const response = await axios.get(`https://api.github.com/repos/${owner}/${name}`, {
                     headers: {
-                        Authorization: `Bearer ${developerToken}`,
+                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
                     },
                 });
 
@@ -61,7 +63,7 @@ const resolvers = {
                 const scanForYamlFiles = async (path) => {
                     const filesResponse = await axios.get(`https://api.github.com/repos/${owner}/${name}/contents/${path}`, {
                         headers: {
-                            Authorization: `Bearer ${developerToken}`,
+                            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
                         },
                     });
 
@@ -95,7 +97,7 @@ const resolvers = {
                 // Fetch number of files
                 const filesResponse = await axios.get(`https://api.github.com/repos/${owner}/${name}/contents`, {
                     headers: {
-                        Authorization: `Bearer ${developerToken}`,
+                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
                     },
                 });
 
@@ -104,7 +106,7 @@ const resolvers = {
                 // Fetch active webhooks
                 const webhooksResponse = await axios.get(`https://api.github.com/repos/${owner}/${name}/hooks`, {
                     headers: {
-                        Authorization: `Bearer ${developerToken}`,
+                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
                     },
                 });
 
