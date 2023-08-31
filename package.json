@@ -1,19 +1,18 @@
 {
   "name": "githubscanner",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "type": "module",
+  "description": "Github Scanner to scan public repos and their details",
+  "main": "src/index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --experimental-modules index.mjs"
+    "start": "nodemon startnodemon --experimental-modules src/index.mjs"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "apollo-server": "^3.12.0",
-    "axios": "^1.4.0",
+    "axios": "^1.5.0",
+    "dotenv": "^16.3.1",
     "esm": "^3.2.25",
     "graphql": "^16.8.0",
     "nodemon": "^3.0.1",
